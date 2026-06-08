@@ -162,7 +162,8 @@ echo "==> [6/6] 收尾"
 cp -v "$IMAGE_SRC" "$OUT/Image.gz"
 cp -v "$DTB_SRC"   "$OUT/$DTB_NAME"
 
-( cd "$OUT" && sha256sum Image.gz $DTB_NAME bl31.bin u-boot-sunxi-with-spl.bin modules.tar.gz 2>/dev/null ) > "$OUT/SHA256SUMS"
+( cd "$OUT" && sha256sum Image.gz $DTB_NAME modules.tar.gz 2>/dev/null \
+    && sha256sum bl31.bin u-boot-sunxi-with-spl.bin 2>/dev/null || true ) > "$OUT/SHA256SUMS"
 cat "$OUT/SHA256SUMS"
 
 echo ""
