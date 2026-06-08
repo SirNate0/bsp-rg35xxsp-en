@@ -1,0 +1,147 @@
+name: BSP Build
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  CROSS_COMPILE: aarch64-linux-gnu-
+
+jobs:
+  # ──────────────────────────────────────────────
+  # TF-A (BL31) — ~30s
+  # ──────────────────────────────────────────────
+  build-tfa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false  # 不需要 submodule，只用 scripts/
+
+      - name: Clone arm-tf-a
+        run: |
+          git clone --depth 1 --branch lts-v2.14.2 \
+            https://github.com/ARM-software/arm-trusted-firmware.git arm-tf-a
+
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build TF-A
+        run: ./scripts/build_tfa.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bl31
+          path: out/bl31.bin
+
+  # ──────────────────────────────────────────────
+  # U-Boot — ~2-3min, depends on TF-A
+  # ──────────────────────────────────────────────
+  build-uboot:
+    needs: build-tfa
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Clone u-boot
+        run: |
+          git clone --depth 1 --branch v2026.04 \
+            https://github.com/u-boot/u-boot.git u-boot
+
+      - name: Download bl31
+        uses: actions/download-artifact@v4
+        with:
+          name: bl31
+          path: out/
+
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build U-Boot
+        run: ./scripts/build_uboot.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uboot
+          path: |
+            out/u-boot-sunxi-with-spl.bin
+            out/u-boot.bin
+
+  # ──────────────────────────────────────────────
+  # Kernel — ~15-20min, independent of TFA/U-Boot
+  # ──────────────────────────────────────────────
+  build-kernel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Clone linux
+        run: |
+          git clone --depth 1 --branch v7.0.9 \
+            https://github.com/gregkh/linux.git linux
+
+      - name: Install toolchain & deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu bc bison flex libssl-dev
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/ccache
+          key: kernel-ccache-${{ hashFiles('configs/rg35xxsp.config') }}
+          restore-keys: kernel-ccache-
+
+      - name: Setup ccache
+        run: |
+          sudo apt-get install -y ccache
+          echo "/usr/lib/ccache" >> $GITHUB_PATH
+
+      - name: Build Kernel
+        run: ./scripts/build_kernel.sh release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kernel
+          path: |
+            out/Image.gz
+            out/*.dtb
+            out/modules.tar.gz
+            out/p2-payload/
+
+  # ──────────────────────────────────────────────
+  # 汇总所有产物 + SHA256
+  # ──────────────────────────────────────────────
+  collect:
+    needs: [build-tfa, build-uboot, build-kernel]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: out/
+
+      - name: Generate SHA256SUMS
+        run: |
+          cd out
+          find . -type f -name '*.bin' -o -name '*.gz' -o -name '*.dtb' \
+            | sort | xargs sha256sum > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/**/*
+          generate_release_notes: true
