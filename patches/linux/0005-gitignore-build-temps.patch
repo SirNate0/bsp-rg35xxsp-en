@@ -1,0 +1,43 @@
+diff --git a/.gitignore b/.gitignore
+index 3a7241c94..bbed76713 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -184,3 +184,38 @@ sphinx_*/
+ 
+ # Rust analyzer configuration
+ /rust-project.json
++
++# Additional build-time temp artifacts missed in initial .gitignore
++.checked-*
++.missing-syscalls.d
++.tmp_vmlinux*
++.tmp_initcalls.lds
++.tmp_symversions.lds
++.scmversion
++.vmlinux.export.c
++vmlinux.unstripped
++
++# DTS overlay build artifacts
++arch/*/boot/dts/**/*.dtbo
++arch/*/boot/dts/**/dtbs-list
++arch/*/boot/dts/**/.*.dtbo.d.dtc.tmp
++arch/*/boot/dts/**/.*.dtbo.d.pre.tmp
++arch/*/boot/dts/**/.*.dtbo.dts.tmp
++
++# DTC temp files (dtb build)
++drivers/of/empty_root.dtb
++drivers/of/empty_root.dtb.S
++drivers/of/.empty_root.dtb.*
++
++# Crypto ASN.1 generated sources
++crypto/*.asn1.[ch]
++crypto/asymmetric_keys/*.asn1.[ch]
++certs/signing_key.*
++
++# Kernel config/initramfs data
++kernel/config_data*
++usr/.initramfs_data.cpio.d
++
++# Kconfig generated parser/lexer
++scripts/kconfig/lexer.lex.c
++scripts/kconfig/parser.tab.[ch]
