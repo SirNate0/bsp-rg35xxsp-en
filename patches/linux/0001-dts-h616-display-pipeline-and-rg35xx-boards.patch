@@ -573,9 +573,9 @@ index 0cf16dc90..641bcbf5e 100644
 +};
 +
 +/*
-+ * EHCI0/OHCI0 与 MUSB gadget 共用 PHY0,同时启用会导致 PHY 被
-+ * 切到 host 模式而破坏 gadget。键盘本身需 OTG 转接头,暂禁用。
-+ * 待解决 PHY0 多控制器共存后再启用。
++ * EHCI0/OHCI0 shares PHY0 with MUSB gadget; enabling both would
++ * switch PHY to host mode and break gadget. Keyboard needs OTG adapter.
++ * Keep disabled until PHY0 multi-controller coexistence is resolved.
 + */
 +&ehci0 {
 +	status = "disabled";

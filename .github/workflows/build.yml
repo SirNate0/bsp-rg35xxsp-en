@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false  # 不需要 submodule，只用 scripts/
+          submodules: false  # no submodules needed, only scripts/
 
       - name: Clone arm-tf-a
         run: |
@@ -119,7 +119,7 @@ jobs:
             out/p2-payload/
 
   # ──────────────────────────────────────────────
-  # 汇总所有产物 + SHA256
+  # Collect all artifacts + SHA256
   # ──────────────────────────────────────────────
   collect:
     needs: [build-tfa, build-uboot, build-kernel]
